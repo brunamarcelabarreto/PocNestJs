@@ -108,12 +108,6 @@ describe("AuthContext", () => {
     vi.mocked(authApi.login).mockResolvedValue(mockTokens);
     vi.mocked(authApi.logout).mockResolvedValue({});
 
-    const { rerender } = render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>,
-    );
-
     // Login first
     const loginBtn = screen.getByText("Login");
     loginBtn.click();
