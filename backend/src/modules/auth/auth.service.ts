@@ -1,0 +1,175 @@
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) { }
+
+  async registerTenant(tenantName: string, email: string, password: string, adminName: string) {
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email já cadastrado');
+    }
+
+    const slug = tenantName.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+
+    if (password.length < 8) {
+      throw new BadRequestException('Senha deve ter pelo menos 8 caracteres');
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: tenantName,
+          slug,
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name: adminName,
+          role: 'ADMIN',
+          tenantId: tenant.id,
+        },
+      });
+
+      return { tenant, user };
+    });
+
+    return {
+      tenant: result.tenant,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role,
+      },
+    };
+  }
+
+  async login(email: string, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { email },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    if (!user.active) {
+      throw new UnauthorizedException('Usuário inativo');
+    }
+
+    const passwordMatch = await this.comparePassword(password, user.password);
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    const accessToken = this.generateJwt(user.id, user.email, user.tenantId, user.role);
+    const refreshTokenValue = this.generateRefreshToken(user.id);
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await this.prisma.refreshToken.create({
+      data: {
+        token: refreshTokenValue,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken: refreshTokenValue,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
+    };
+  }
+
+  async refreshToken(refreshTokenValue: string) {
+    const tokenRecord = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshTokenValue },
+      include: { user: true },
+    });
+
+    if (!tokenRecord) {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    if (tokenRecord.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token expirado');
+    }
+
+    const user = tokenRecord.user;
+    const newAccessToken = this.generateJwt(
+      user.id,
+      user.email,
+      user.tenantId,
+      user.role,
+    );
+
+    return {
+      accessToken: newAccessToken,
+    };
+  }
+
+  async logout(refreshTokenValue: string) {
+    await this.prisma.refreshToken.deleteMany({
+      where: { token: refreshTokenValue },
+    });
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
+  }
+
+  async comparePassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
+
+  generateJwt(userId: string, email: string, tenantId: string, role: string) {
+    return this.jwtService.sign(
+      {
+        sub: userId,
+        email,
+        tenantId,
+        role,
+      },
+      {
+        secret: process.env.JWT_SECRET,
+        expiresIn: (process.env.JWT_EXPIRATION || '3600s') as string,
+      },
+    );
+  }
+
+  generateRefreshToken(userId: string) {
+    return this.jwtService.sign(
+      {
+        sub: userId,
+        type: 'refresh',
+      },
+      {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: process.env.JWT_REFRESH_EXPIRATION || '604800s',
+      },
+    );
+  }
+}

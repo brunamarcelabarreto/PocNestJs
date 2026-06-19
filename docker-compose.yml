@@ -1,0 +1,72 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: commandix_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-commandix_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-commandix_password}
+      POSTGRES_DB: ${DB_NAME:-commandix_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-commandix_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - commandix_network
+
+  # NestJS Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: commandix_backend
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-commandix_user}:${DB_PASSWORD:-commandix_password}@postgres:5432/${DB_NAME:-commandix_db}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRATION: 3600
+      JWT_REFRESH_EXPIRATION: 604800
+      API_PORT: 3000
+      API_URL: http://localhost:3000
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+    networks:
+      - commandix_network
+
+  # React Frontend (opcional)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: commandix_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - commandix_network
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  commandix_network:
+    driver: bridge

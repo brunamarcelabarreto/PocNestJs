@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users              User[]
+  contractTemplates  ContractTemplate[]
+  contracts          Contract[]
+
+  @@index([slug])
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  password  String
+  name      String
+  role      UserRole @default(VIEWER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractsCreated Contract[] @relation("ContractCreatedBy")
+  contractsUpdated Contract[] @relation("ContractUpdatedBy")
+  auditLogs AuditLog[]
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+}
+
+model ContractTemplate {
+  id        String   @id @default(cuid())
+  name      String   @default("Contrato Padrão")
+  version   Int      @default(1)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fields   TemplateField[]
+  contracts Contract[]
+
+  @@index([tenantId])
+  @@index([tenantId, active])
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  EMAIL
+  PHONE
+  TEXTAREA
+}
+
+model TemplateField {
+  id           String    @id @default(cuid())
+  name         String
+  fieldType    FieldType
+  required     Boolean   @default(false)
+  placeholder  String?
+  defaultValue String?
+  order        Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  templateId String
+  template   ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  contractFields ContractField[]
+
+  @@index([templateId])
+  @@unique([templateId, name])
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+model Contract {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  status      ContractStatus   @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  activatedAt DateTime?
+  closedAt    DateTime?
+  createdBy   String
+  createdByUser User @relation("ContractCreatedBy", fields: [createdBy], references: [id])
+  updatedBy   String?
+  updatedByUser User? @relation("ContractUpdatedBy", fields: [updatedBy], references: [id])
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  templateId String
+  template   ContractTemplate @relation(fields: [templateId], references: [id])
+  fields     ContractField[]
+  auditLogs  AuditLog[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([templateId])
+}
+
+model ContractField {
+  id    String @id @default(cuid())
+  value String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  fieldId String
+  field   TemplateField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, fieldId])
+  @@index([contractId])
+  @@index([fieldId])
+}
+
+enum AuditAction {
+  CONTRACT_CREATED
+  CONTRACT_UPDATED
+  FIELD_UPDATED
+  STATUS_CHANGED
+  CONTRACT_ACTIVATED
+  CONTRACT_CLOSED
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  action      AuditAction
+  fieldName   String?
+  oldValue    String?
+  newValue    String?
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+  tenantId String
+
+  @@index([contractId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([contractId, createdAt])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}

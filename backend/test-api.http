@@ -1,0 +1,145 @@
+### Environment
+@baseUrl = http://localhost:3000
+@tenantId = 
+@accessToken = 
+@refreshToken = 
+@templateId = 
+@contractId = 
+
+### 1. Register Tenant (Create account)
+POST {{baseUrl}}/api/auth/register-tenant
+Content-Type: application/json
+
+{
+  "tenantName": "Acme Corp",
+  "email": "admin@acme.com",
+  "password": "senha123456",
+  "adminName": "John Admin"
+}
+
+### 2. Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@acme.com",
+  "password": "senha123456"
+}
+
+### 3. Create Template
+POST {{baseUrl}}/api/templates
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Template Padrão",
+  "fields": [
+    {
+      "name": "Nome da Empresa",
+      "fieldType": "TEXT",
+      "required": true,
+      "placeholder": "Ex: Acme Corp"
+    },
+    {
+      "name": "CNPJ",
+      "fieldType": "TEXT",
+      "required": true,
+      "placeholder": "00.000.000/0000-00"
+    },
+    {
+      "name": "Data de Assinatura",
+      "fieldType": "DATE",
+      "required": true
+    },
+    {
+      "name": "Valor do Contrato",
+      "fieldType": "NUMBER",
+      "required": true
+    },
+    {
+      "name": "Email",
+      "fieldType": "EMAIL",
+      "required": true
+    }
+  ]
+}
+
+### 4. Get Active Template
+GET {{baseUrl}}/api/templates/active
+Authorization: Bearer {{accessToken}}
+
+### 5. List All Templates
+GET {{baseUrl}}/api/templates
+Authorization: Bearer {{accessToken}}
+
+### 6. Create Contract
+POST {{baseUrl}}/api/contracts
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "templateId": "{{templateId}}",
+  "title": "Contrato de Prestação de Serviços",
+  "description": "Contrato entre as partes para prestação de serviços de desenvolvimento",
+  "fields": {
+    "nome_empresa": "Tech Solutions Ltda",
+    "cnpj": "12.345.678/0001-90",
+    "data_assinatura": "2026-06-18",
+    "valor": "50000",
+    "email": "contato@techsolutions.com"
+  }
+}
+
+### 7. Get Contract by ID
+GET {{baseUrl}}/api/contracts/{{contractId}}
+Authorization: Bearer {{accessToken}}
+
+### 8. List Contracts
+GET {{baseUrl}}/api/contracts
+Authorization: Bearer {{accessToken}}
+
+### 9. List Contracts by Status
+GET {{baseUrl}}/api/contracts?status=DRAFT
+Authorization: Bearer {{accessToken}}
+
+### 10. Update Contract
+PUT {{baseUrl}}/api/contracts/{{contractId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "title": "Contrato de Prestação de Serviços - Atualizado",
+  "description": "Descrição atualizada",
+  "fields": {
+    "nome_empresa": "Tech Solutions Ltda - Updated",
+    "cnpj": "12.345.678/0001-90",
+    "data_assinatura": "2026-06-20",
+    "valor": "60000",
+    "email": "contato@techsolutions.com"
+  }
+}
+
+### 11. Activate Contract
+PATCH {{baseUrl}}/api/contracts/{{contractId}}/activate
+Authorization: Bearer {{accessToken}}
+
+### 12. Close Contract
+PATCH {{baseUrl}}/api/contracts/{{contractId}}/close
+Authorization: Bearer {{accessToken}}
+
+### 13. Refresh Token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 14. Logout
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
