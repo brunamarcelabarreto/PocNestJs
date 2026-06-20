@@ -27,9 +27,8 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  const port = process.env.API_PORT || 3000;
+  const port = parseInt(process.env.API_PORT || '3000', 10);
   await app.listen(port);
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
 }
 
 bootstrap();

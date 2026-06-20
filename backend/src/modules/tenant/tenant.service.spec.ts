@@ -3,8 +3,6 @@ import { NotFoundException } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPrisma: any = {
   tenant: {
     create: jest.fn(),
@@ -47,8 +45,6 @@ const mockTenantWithRelations = {
   ],
 };
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
 describe('TenantService', () => {
   let service: TenantService;
 
@@ -64,8 +60,6 @@ describe('TenantService', () => {
 
     service = module.get<TenantService>(TenantService);
   });
-
-  // ─── create ──────────────────────────────────────────────────────────────
 
   describe('create', () => {
     it('should create a new tenant', async () => {
@@ -98,8 +92,6 @@ describe('TenantService', () => {
       expect(result.slug).toBe('outra-empresa');
     });
   });
-
-  // ─── findById ────────────────────────────────────────────────────────────
 
   describe('findById', () => {
     it('should return tenant with relations by id', async () => {
@@ -153,7 +145,6 @@ describe('TenantService', () => {
     });
   });
 
-  // ─── findBySlug ──────────────────────────────────────────────────────────
 
   describe('findBySlug', () => {
     it('should return tenant by slug', async () => {
@@ -193,8 +184,6 @@ describe('TenantService', () => {
       expect(result.name).toBe('Outra Empresa');
     });
   });
-
-  // ─── getCurrentTenant ────────────────────────────────────────────────────
 
   describe('getCurrentTenant', () => {
     it('should return current tenant info by id', async () => {

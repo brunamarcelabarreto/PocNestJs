@@ -5,9 +5,6 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class TenantService {
   constructor(private prisma: PrismaService) { }
 
-  /**
-   * Cria um novo tenant
-   */
   async create(name: string, slug: string) {
     return await this.prisma.tenant.create({
       data: {
@@ -17,9 +14,6 @@ export class TenantService {
     });
   }
 
-  /**
-   * Encontra tenant pelo ID
-   */
   async findById(id: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
@@ -47,9 +41,6 @@ export class TenantService {
     return tenant;
   }
 
-  /**
-   * Encontra tenant pelo slug
-   */
   async findBySlug(slug: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug },
@@ -62,9 +53,6 @@ export class TenantService {
     return tenant;
   }
 
-  /**
-   * Obtém informações do tenant atual
-   */
   async getCurrentTenant(tenantId: string) {
     return await this.findById(tenantId);
   }

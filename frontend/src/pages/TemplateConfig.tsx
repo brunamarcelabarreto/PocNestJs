@@ -1,140 +1,202 @@
-import { useState, useEffect } from 'react';
-import { templatesApi } from '../api/templates';
-import type { TemplateFieldInput } from '../api/templates';
-import type { Template, TemplateField, FieldType } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { templatesApi } from "../api/templates";
+import type { TemplateFieldInput } from "../api/templates";
+import type { Template, TemplateField, FieldType } from "../types";
+import { useAuth } from "../contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Pencil } from "lucide-react";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
-  { value: 'TEXT', label: 'Texto' },
-  { value: 'TEXTAREA', label: 'Texto longo' },
-  { value: 'NUMBER', label: 'Número' },
-  { value: 'DATE', label: 'Data' },
-  { value: 'BOOLEAN', label: 'Booleano' },
-  { value: 'EMAIL', label: 'Email' },
-  { value: 'PHONE', label: 'Telefone' },
+  { value: "TEXT", label: "Texto" },
+  { value: "TEXTAREA", label: "Texto longo" },
+  { value: "NUMBER", label: "Número" },
+  { value: "DATE", label: "Data" },
+  { value: "BOOLEAN", label: "Booleano" },
+  { value: "EMAIL", label: "Email" },
+  { value: "PHONE", label: "Telefone" },
 ];
 
 interface FieldDraft {
+  _key: string;
   name: string;
   fieldType: FieldType;
   required: boolean;
   placeholder: string;
 }
 
+let _keyCounter = 0;
 const emptyField = (): FieldDraft => ({
-  name: '',
-  fieldType: 'TEXT',
+  _key: String(++_keyCounter),
+  name: "",
+  fieldType: "TEXT",
   required: false,
-  placeholder: '',
+  placeholder: "",
 });
 
 export function TemplateConfig() {
   const { user } = useAuth();
-  const [template, setTemplate] = useState<Template | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  // undefined = list view, null = create mode, Template = edit mode
+  const [editingTemplate, setEditingTemplate] = useState<
+    Template | null | undefined
+  >(undefined);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [templateName, setTemplateName] = useState('Contrato Padrão');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [fields, setFields] = useState<FieldDraft[]>([emptyField()]);
+  const loadingRef = useRef(false);
 
-  const loadTemplate = async () => {
+  const loadTemplates = useCallback(async () => {
+    if (loadingRef.current) return; // Prevent duplicate requests
+    loadingRef.current = true;
     setLoading(true);
     try {
-      const data = await templatesApi.getActive();
-      setTemplate(data);
-      setTemplateName(data.name);
-      setFields(
-        data.fields.map((f: TemplateField) => ({
-          name: f.name,
-          fieldType: f.fieldType,
-          required: f.required,
-          placeholder: f.placeholder || '',
-        })),
-      );
+      const data = await templatesApi.list();
+      setTemplates(data);
     } catch {
-      setTemplate(null);
+      setTemplates([]);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadTemplate();
-  }, []);
+    loadTemplates();
+  }, [loadTemplates]);
+
+  const handleNew = () => {
+    setEditingTemplate(null);
+    setTemplateName("");
+    setFields([emptyField()]);
+    setError("");
+    setSuccess("");
+  };
+
+  const handleEdit = (tmpl: Template) => {
+    setEditingTemplate(tmpl);
+    setTemplateName(tmpl.name);
+    setFields(
+      tmpl.fields.map((f: TemplateField) => ({
+        _key: String(++_keyCounter),
+        name: f.name,
+        fieldType: f.fieldType,
+        required: f.required,
+        placeholder: f.placeholder || "",
+      })),
+    );
+    setError("");
+    setSuccess("");
+  };
+
+  const handleCancel = () => {
+    setEditingTemplate(undefined);
+    setError("");
+  };
 
   const addField = () => setFields([...fields, emptyField()]);
 
   const removeField = (index: number) =>
     setFields(fields.filter((_, i) => i !== index));
 
-  const updateField = (index: number, key: keyof FieldDraft, value: string | boolean) =>
+  const updateField = (
+    index: number,
+    key: keyof FieldDraft,
+    value: string | boolean,
+  ) =>
     setFields(fields.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
 
   const handleSave = async () => {
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setSaving(true);
 
     const validFields = fields.filter((f) => f.name.trim());
     if (validFields.length === 0) {
-      setError('Adicione pelo menos um campo com nome.');
+      setError("Adicione pelo menos um campo com nome.");
       setSaving(false);
       return;
     }
 
     const payload = {
       name: templateName,
-      fields: validFields.map((f, i): TemplateFieldInput => ({ ...f, order: i })),
+      fields: validFields.map(
+        (f, i): TemplateFieldInput => ({ ...f, order: i }),
+      ),
     };
 
     try {
-      if (template) {
-        await templatesApi.update(template.id, payload);
+      if (editingTemplate) {
+        await templatesApi.update(editingTemplate.id, payload);
       } else {
         await templatesApi.create(payload);
       }
-      setSuccess('Template salvo com sucesso!');
-      setEditing(false);
-      await loadTemplate();
+      setSuccess("Template salvo com sucesso!");
+      setEditingTemplate(undefined);
+      await loadTemplates();
     } catch (err: unknown) {
-      const msg = (err as any)?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Erro ao salvar template');
+      const msg = (
+        err as { response?: { data?: { message?: string | string[] } } }
+      )?.response?.data?.message;
+      setError(
+        Array.isArray(msg) ? msg.join(", ") : msg || "Erro ao salvar template",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
 
-  if (loading) return <div className="full-loading"><div className="spinner" /></div>;
+  if (loading)
+    return (
+      <div className="full-loading">
+        <div className="spinner" />
+      </div>
+    );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Template de Contrato</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Templates de Contrato
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {template
-              ? `Versão ${template.version} · Ativo`
-              : 'Nenhum template configurado'}
+            {editingTemplate === undefined
+              ? `${templates.length} template(s) configurado(s)`
+              : editingTemplate
+                ? `Editando: ${editingTemplate.name}`
+                : "Novo Template"}
           </p>
         </div>
-        {isAdmin && !editing && (
-          <Button onClick={() => setEditing(true)} className="rounded-full">
-            <Pencil size={14} className="mr-1.5" />
-            {template ? 'Editar Template' : 'Criar Template'}
+        {isAdmin && editingTemplate === undefined && (
+          <Button onClick={handleNew} className="rounded-full">
+            <Plus size={14} className="mr-1.5" />
+            Novo Template
           </Button>
         )}
       </div>
@@ -142,7 +204,7 @@ export function TemplateConfig() {
       {success && (
         <div
           className="text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/30 rounded-lg px-3 py-2 cursor-pointer"
-          onClick={() => setSuccess('')}
+          onClick={() => setSuccess("")}
         >
           {success}
         </div>
@@ -150,55 +212,68 @@ export function TemplateConfig() {
       {error && (
         <div
           className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2 cursor-pointer"
-          onClick={() => setError('')}
+          onClick={() => setError("")}
         >
           {error}
         </div>
       )}
 
-      {!editing ? (
+      {editingTemplate === undefined ? (
         <Card>
           <CardContent className="p-0">
-            {!template ? (
+            {templates.length === 0 ? (
               <p className="text-muted-foreground text-sm p-6">
                 Nenhum template configurado.
-                {isAdmin && ' Clique em "Criar Template" para começar.'}
+                {isAdmin && ' Clique em "Novo Template" para começar.'}
               </p>
             ) : (
-              <>
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                  <CardTitle className="text-base">{template.name}</CardTitle>
-                  <Badge variant="outline" className="status-active">v{template.version}</Badge>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Campo</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Obrigatório</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {template.fields.map((field, i) => (
-                      <TableRow key={field.id}>
-                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium">{field.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {FIELD_TYPES.find((t) => t.value === field.fieldType)?.label}
-                        </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Versão</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Campos</TableHead>
+                    {isAdmin && <TableHead className="w-20"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {templates.map((tmpl) => (
+                    <TableRow key={tmpl.id}>
+                      <TableCell className="font-medium">{tmpl.name}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        v{tmpl.version}
+                      </TableCell>
+                      <TableCell>
+                        {tmpl.active ? (
+                          <Badge variant="outline" className="status-active">
+                            Ativo
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="status-closed">
+                            Inativo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {tmpl.fields.length} campo(s)
+                      </TableCell>
+                      {isAdmin && (
                         <TableCell>
-                          {field.required ? (
-                            <Badge variant="outline" className="status-active text-xs">Sim</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-primary"
+                            onClick={() => handleEdit(tmpl)}
+                          >
+                            <Pencil size={12} className="mr-1" /> Editar
+                          </Button>
                         </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
@@ -210,7 +285,9 @@ export function TemplateConfig() {
               <Input
                 id="templateName"
                 value={templateName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemplateName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setTemplateName(e.target.value)
+                }
                 placeholder="Ex: Contrato de Prestação de Serviços"
               />
             </div>
@@ -218,21 +295,27 @@ export function TemplateConfig() {
             <Separator />
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-foreground">Campos do Contrato</p>
+              <p className="text-sm font-semibold text-foreground">
+                Campos do Contrato
+              </p>
 
               {fields.map((field, i) => (
                 <div
-                  key={i}
-                  className="flex items-end gap-3 p-3 rounded-lg border border-border bg-muted/20"
+                  key={field._key}
+                  className="flex items-end gap-3 p-3 rounded-lg border border-border"
                 >
-                  <span className="text-xs text-muted-foreground w-5 pb-2 flex-shrink-0">{i + 1}</span>
+                  <span className="text-xs text-muted-foreground w-5 pb-2 flex-shrink-0">
+                    {i + 1}
+                  </span>
 
                   <div className="space-y-1.5 flex-[2]">
                     <Label className="text-xs">Nome</Label>
                     <Input
                       value={field.name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(i, 'name', e.target.value)}
-                      placeholder="Ex: Nome do Cliente"
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        updateField(i, "name", e.target.value)
+                      }
+                      placeholder="Ex: Nome"
                       className="h-8 text-sm"
                     />
                   </div>
@@ -241,7 +324,9 @@ export function TemplateConfig() {
                     <Label className="text-xs">Tipo</Label>
                     <Select
                       value={field.fieldType}
-                      onValueChange={(v: string) => updateField(i, 'fieldType', v)}
+                      onValueChange={(v: string) =>
+                        updateField(i, "fieldType", v)
+                      }
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
@@ -260,7 +345,9 @@ export function TemplateConfig() {
                     <Label className="text-xs">Placeholder</Label>
                     <Input
                       value={field.placeholder}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(i, 'placeholder', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        updateField(i, "placeholder", e.target.value)
+                      }
                       placeholder="Opcional"
                       className="h-8 text-sm"
                     />
@@ -270,9 +357,16 @@ export function TemplateConfig() {
                     <Checkbox
                       id={`req-${i}`}
                       checked={field.required}
-                      onCheckedChange={(checked: boolean) => updateField(i, 'required', checked === true)}
+                      onCheckedChange={(checked: boolean) =>
+                        updateField(i, "required", checked === true)
+                      }
                     />
-                    <Label htmlFor={`req-${i}`} className="text-xs cursor-pointer">Obrig.</Label>
+                    <Label
+                      htmlFor={`req-${i}`}
+                      className="text-xs cursor-pointer"
+                    >
+                      Obrig.
+                    </Label>
                   </div>
 
                   <Button
@@ -282,23 +376,35 @@ export function TemplateConfig() {
                     className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0 mb-0.5"
                     onClick={() => removeField(i)}
                     disabled={fields.length === 1}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
+                  ></Button>
                 </div>
               ))}
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={addField}>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={addField}
+              >
                 <Plus size={14} className="mr-1" /> Adicionar Campo
               </Button>
               <div className="flex gap-2">
-                <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
+                <Button type="button" variant="ghost" onClick={handleCancel}>
                   Cancelar
                 </Button>
-                <Button type="button" onClick={handleSave} disabled={saving} className="rounded-full">
-                  {saving ? 'Salvando...' : 'Salvar Template'}
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="rounded-full"
+                >
+                  {saving
+                    ? "Salvando..."
+                    : editingTemplate
+                      ? "Salvar Alterações"
+                      : "Criar Template"}
                 </Button>
               </div>
             </div>

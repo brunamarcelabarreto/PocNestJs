@@ -9,6 +9,9 @@ export const authApi = {
       .post('/api/auth/register-tenant', { tenantName, adminName, email, password })
       .then((r) => r.data),
 
+  refresh: (refreshToken: string) =>
+    client.post('/api/auth/refresh', { refreshToken }).then((r) => r.data),
+
   logout: (refreshToken: string) =>
     client.post('/api/auth/logout', { refreshToken }).then((r) => r.data),
 };

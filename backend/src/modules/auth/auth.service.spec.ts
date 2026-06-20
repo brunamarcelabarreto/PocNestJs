@@ -5,8 +5,6 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPrisma: any = {
   user: {
     findFirst: jest.fn(),
@@ -29,8 +27,6 @@ const mockJwtService = {
   verifyAsync: jest.fn(),
 };
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -47,8 +43,6 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
   });
-
-  // ─── registerTenant ──────────────────────────────────────────────────────
 
   describe('registerTenant', () => {
     it('should create tenant and admin user', async () => {
@@ -86,8 +80,6 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
-
-  // ─── login ───────────────────────────────────────────────────────────────
 
   describe('login', () => {
     const hashedPassword = bcrypt.hashSync('senha123', 10);

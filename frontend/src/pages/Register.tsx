@@ -53,7 +53,7 @@ export function Register() {
           >
             ⚡
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Criar Tenant</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Criar Conta</h1>
           <p className="text-sm text-muted-foreground">
             Configure sua organização
           </p>
@@ -72,7 +72,7 @@ export function Register() {
                 name="tenantName"
                 value={form.tenantName}
                 onChange={handleChange}
-                placeholder="Minha Empresa S.A."
+                placeholder="Minha Empresa"
                 required
                 minLength={3}
                 autoFocus
@@ -85,7 +85,7 @@ export function Register() {
                 name="adminName"
                 value={form.adminName}
                 onChange={handleChange}
-                placeholder="João Silva"
+                placeholder="Meu nome"
                 required
                 minLength={3}
               />
@@ -120,7 +120,7 @@ export function Register() {
               className="w-full rounded-full"
               disabled={loading}
             >
-              {loading ? "Criando..." : "Criar Tenant"}
+              {loading ? "Criando..." : "Criar Conta"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

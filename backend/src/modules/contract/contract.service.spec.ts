@@ -4,8 +4,6 @@ import { ContractService } from './contract.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { HistoryService } from '../history/history.service';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPrisma: any = {
   contractTemplate: { findUnique: jest.fn() },
   contract: {
@@ -51,8 +49,6 @@ const mockContract = {
   createdAt: new Date(),
 };
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
 describe('ContractService', () => {
   let service: ContractService;
 
@@ -69,8 +65,6 @@ describe('ContractService', () => {
 
     service = module.get<ContractService>(ContractService);
   });
-
-  // ─── create ──────────────────────────────────────────────────────────────
 
   describe('create', () => {
     it('should create contract and log audit', async () => {
@@ -140,8 +134,6 @@ describe('ContractService', () => {
     });
   });
 
-  // ─── list ────────────────────────────────────────────────────────────────
-
   describe('list', () => {
     it('should return paginated contracts', async () => {
       mockPrisma.contract.findMany.mockResolvedValue([mockContract]);
@@ -176,8 +168,6 @@ describe('ContractService', () => {
     });
   });
 
-  // ─── activate ────────────────────────────────────────────────────────────
-
   describe('activate', () => {
     it('should activate a DRAFT contract', async () => {
       mockPrisma.contract.findUnique.mockResolvedValue({ ...mockContract, status: 'DRAFT' });
@@ -202,8 +192,6 @@ describe('ContractService', () => {
       );
     });
   });
-
-  // ─── close ───────────────────────────────────────────────────────────────
 
   describe('close', () => {
     it('should close an ACTIVE contract', async () => {

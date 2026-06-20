@@ -209,6 +209,100 @@
   flex: 1;
   overflow-y: auto;
   padding: 28px 32px;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3 {
+  color: #1a1a1a;
+}
+
+.main-content .text-muted-foreground {
+  color: #6b7280 !important;
+}
+
+.main-content .bg-card,
+.main-content .card {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #1a1a1a;
+}
+
+.main-content .border {
+  border-color: #e5e7eb !important;
+}
+
+.main-content .text-foreground {
+  color: #1a1a1a !important;
+}
+
+.main-content .text-destructive {
+  color: #dc2626 !important;
+}
+
+/* Light theme for inputs within main-content */
+.main-content input,
+.main-content textarea,
+.main-content select {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #1a1a1a;
+}
+
+.main-content input::placeholder,
+.main-content textarea::placeholder {
+  color: #9ca3af;
+}
+
+.main-content input:focus,
+.main-content textarea:focus,
+.main-content select:focus {
+  border-color: hsl(var(--primary));
+  outline: none;
+}
+
+/* Light theme for tables */
+.main-content table {
+  background: #ffffff;
+}
+
+.main-content thead {
+  background: #f3f4f6;
+}
+
+.main-content thead th {
+  color: #1a1a1a;
+  border-color: #e5e7eb;
+}
+
+.main-content tbody td {
+  color: #1a1a1a;
+  border-color: #e5e7eb;
+}
+
+.main-content tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Light theme for badges and status indicators */
+.main-content .status-active {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.main-content .status-draft {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde047;
+}
+
+.main-content .status-closed {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
 }
 
 /* ─── Auth page ──────────────────────────────────────────── */

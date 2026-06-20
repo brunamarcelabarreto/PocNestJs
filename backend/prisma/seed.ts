@@ -51,7 +51,6 @@ async function main() {
     },
   });
 
-  console.log('👥 Creating users for TechStart Inc...');
   const user3 = await prisma.user.create({
     data: {
       email: 'admin@user3.com',
@@ -62,9 +61,6 @@ async function main() {
     },
   });
 
-  console.log(
-    `✅ Created users: ${user1.email} (${user1.role}), ${user2.email} (${user2.role}), ${user3.email} (${user3.role})`,
-  );
 
   const template1 = await prisma.contractTemplate.create({
     data: {
@@ -266,11 +262,6 @@ async function main() {
       },
     },
   });
-
-  console.log(
-    `✅ Created contracts: CT-2025-001 to CT-2025-005 (3 for Tenant 1, 2 for Tenant 2)`,
-  );
-
 
   await prisma.auditLog.create({
     data: {

@@ -3,8 +3,6 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TemplateService } from './template.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPrisma: any = {
   contractTemplate: {
     create: jest.fn(),
@@ -30,8 +28,6 @@ const mockTemplate = {
   ],
 };
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
 describe('TemplateService', () => {
   let service: TemplateService;
 
@@ -47,8 +43,6 @@ describe('TemplateService', () => {
 
     service = module.get<TemplateService>(TemplateService);
   });
-
-  // ─── create ──────────────────────────────────────────────────────────────
 
   describe('create', () => {
     it('should create template with fields', async () => {
@@ -77,8 +71,6 @@ describe('TemplateService', () => {
     });
   });
 
-  // ─── getActiveTemplate ───────────────────────────────────────────────────
-
   describe('getActiveTemplate', () => {
     it('should return active template', async () => {
       mockPrisma.contractTemplate.findFirst.mockResolvedValue(mockTemplate);
@@ -98,8 +90,6 @@ describe('TemplateService', () => {
     });
   });
 
-  // ─── update ──────────────────────────────────────────────────────────────
-
   describe('update', () => {
     it('should create new version and deactivate old template', async () => {
       mockPrisma.contractTemplate.findUnique.mockResolvedValue(mockTemplate);
@@ -113,7 +103,6 @@ describe('TemplateService', () => {
       });
 
       expect(result.version).toBe(2);
-      // Old template deactivated
       expect(mockPrisma.contractTemplate.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: { active: false } }),
       );

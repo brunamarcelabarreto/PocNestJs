@@ -6,7 +6,6 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),

@@ -3,8 +3,11 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import type { User } from "../types";
 import { authApi } from "../api/auth";
 
@@ -20,6 +23,13 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const forceLogout = useCallback(() => {
+    localStorage.clear();
+    setUser(null);
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -34,28 +44,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  useEffect(() => {
+    window.addEventListener("auth:logout", forceLogout);
+    return () => window.removeEventListener("auth:logout", forceLogout);
+  }, [forceLogout]);
+
+  const login = useCallback(async (email: string, password: string) => {
     const data = await authApi.login(email, password);
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     localStorage.setItem("user", JSON.stringify(data.user));
     setUser(data.user);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem("refreshToken");
     if (refreshToken) {
       await authApi.logout(refreshToken).catch(() => {});
     }
     localStorage.clear();
     setUser(null);
-  };
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, login, logout }),
+    [user, loading, login, logout],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

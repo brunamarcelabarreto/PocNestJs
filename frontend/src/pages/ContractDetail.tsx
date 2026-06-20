@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { contractsApi } from "../api/contracts";
 import type { Contract, AuditLog } from "../types";
@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, CheckCircle, XCircle } from "lucide-react";
+import { AlertDialog } from "../components/AlertDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Rascunho",
@@ -35,7 +38,21 @@ export function ContractDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const load = async () => {
+  // Alert states
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("Aviso");
+  const [alertMessage, setAlertMessage] = useState("");
+
+  // Confirm states
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("Confirmação");
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
+  const [pendingErrorMessage, setPendingErrorMessage] = useState("");
+
+  const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
@@ -50,41 +67,57 @@ export function ContractDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [load]);
 
-  const handleActivate = async () => {
-    if (!contract || !confirm("Ativar este contrato?")) return;
+  const handleStatusAction = async (
+    action: () => Promise<void>,
+    confirmMessage: string,
+    errorMessage: string,
+  ) => {
+    setConfirmOpen(true);
+    setConfirmTitle("Confirmação");
+    setConfirmMessage(confirmMessage);
+    setPendingAction(() => action);
+    setPendingErrorMessage(errorMessage);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!contract || !pendingAction) return;
+    setConfirmOpen(false);
     setActionLoading(true);
     try {
-      await contractsApi.activate(contract.id);
+      await pendingAction();
       await load();
     } catch (err: unknown) {
-      alert((err as any)?.response?.data?.message || "Erro ao ativar");
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setAlertTitle("Erro");
+      setAlertMessage(msg || pendingErrorMessage);
+      setAlertOpen(true);
     } finally {
       setActionLoading(false);
+      setPendingAction(null);
+      setPendingErrorMessage("");
     }
   };
 
-  const handleClose = async () => {
-    if (
-      !contract ||
-      !confirm("Encerrar este contrato? Esta ação não pode ser desfeita.")
-    )
-      return;
-    setActionLoading(true);
-    try {
-      await contractsApi.close(contract.id);
-      await load();
-    } catch (err: unknown) {
-      alert((err as any)?.response?.data?.message || "Erro ao encerrar");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const handleActivate = () =>
+    handleStatusAction(
+      () => contractsApi.activate(contract!.id),
+      "Ativar este contrato?",
+      "Erro ao ativar",
+    );
+
+  const handleClose = () =>
+    handleStatusAction(
+      () => contractsApi.close(contract!.id),
+      "Encerrar este contrato? Esta ação não pode ser desfeita.",
+      "Erro ao encerrar",
+    );
 
   if (loading)
     return (
@@ -98,13 +131,27 @@ export function ContractDetail() {
 
   return (
     <div className="space-y-6">
+      <AlertDialog
+        open={alertOpen}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmOpen(false)}
+      />
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate("/contracts")}
-            className="h-7 text-muted-foreground -ml-2 mb-1"
+            className="h-7 text-muted-foreground -ml-2 mb-1 hover:bg-transparent hover:text-foreground"
           >
             <ChevronLeft size={14} className="mr-0.5" /> Contratos
           </Button>

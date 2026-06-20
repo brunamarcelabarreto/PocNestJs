@@ -22,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="brand-logo">⚡</span>
+          <img src="/logo.png" alt="Logo" className="brand-logo h-10 w-10" />
           <span className="brand-name">COMMANDIX</span>
         </div>
 

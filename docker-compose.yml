@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: commandix_postgres
@@ -19,18 +18,15 @@ services:
     networks:
       - commandix_network
 
-  # NestJS Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: commandix_backend
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://${DB_USER:-commandix_user}:${DB_PASSWORD:-commandix_password}@postgres:5432/${DB_NAME:-commandix_db}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_EXPIRATION: 3600
-      JWT_REFRESH_EXPIRATION: 604800
       API_PORT: 3000
       API_URL: http://localhost:3000
       NODE_ENV: development
@@ -46,7 +42,6 @@ services:
     networks:
       - commandix_network
 
-  # React Frontend (opcional)
   frontend:
     build:
       context: ./frontend
@@ -58,6 +53,7 @@ services:
       - backend
     volumes:
       - ./frontend/src:/app/src
+      - ./frontend/dist:/app/dist
     networks:
       - commandix_network
     environment:

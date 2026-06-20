@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -8,6 +9,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private config: ConfigService,
   ) { }
 
   async registerTenant(tenantName: string, email: string, password: string, adminName: string) {
@@ -125,8 +127,26 @@ export class AuthService {
       user.role,
     );
 
+    const newRefreshTokenValue = this.generateRefreshToken(user.id);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.delete({
+        where: { token: refreshTokenValue },
+      });
+
+      await tx.refreshToken.create({
+        data: {
+          token: newRefreshTokenValue,
+          userId: user.id,
+          expiresAt,
+        },
+      });
+    });
+
     return {
       accessToken: newAccessToken,
+      refreshToken: newRefreshTokenValue,
     };
   }
 
@@ -146,18 +166,12 @@ export class AuthService {
   }
 
   generateJwt(userId: string, email: string, tenantId: string, role: string) {
-    return this.jwtService.sign(
-      {
-        sub: userId,
-        email,
-        tenantId,
-        role,
-      },
-      {
-        secret: process.env.JWT_SECRET,
-        expiresIn: (process.env.JWT_EXPIRATION || '3600s') as string,
-      },
-    );
+    return this.jwtService.sign({
+      sub: userId,
+      email,
+      tenantId,
+      role,
+    });
   }
 
   generateRefreshToken(userId: string) {
@@ -167,8 +181,8 @@ export class AuthService {
         type: 'refresh',
       },
       {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: process.env.JWT_REFRESH_EXPIRATION || '604800s',
+        secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.config.get<string>('JWT_REFRESH_EXPIRATION', '604800s'),
       },
     );
   }

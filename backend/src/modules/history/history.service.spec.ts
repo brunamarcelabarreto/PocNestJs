@@ -44,8 +44,6 @@ const mockContract = {
   name: 'Contrato Teste',
 };
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
 describe('HistoryService', () => {
   let service: HistoryService;
 
@@ -61,8 +59,6 @@ describe('HistoryService', () => {
 
     service = module.get<HistoryService>(HistoryService);
   });
-
-  // ─── createAuditLog ──────────────────────────────────────────────────────
 
   describe('createAuditLog', () => {
     it('should create an audit log with all fields', async () => {
@@ -125,8 +121,6 @@ describe('HistoryService', () => {
     });
   });
 
-  // ─── getContractHistory ──────────────────────────────────────────────────
-
   describe('getContractHistory', () => {
     it('should return contract history ordered by createdAt asc', async () => {
       mockPrisma.contract.findUnique.mockResolvedValue(mockContract);
@@ -162,8 +156,6 @@ describe('HistoryService', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
-
-  // ─── getContractHistoryPaginated ────────────────────────────────────────
 
   describe('getContractHistoryPaginated', () => {
     it('should return paginated history with correct pagination metadata', async () => {

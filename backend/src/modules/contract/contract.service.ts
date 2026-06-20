@@ -11,7 +11,7 @@ export class ContractService {
 
   private validateFieldValue(fieldType: string, value: any): void {
     if (value === null || value === undefined || value === '') {
-      return; // Já validado obrigatoriedade antes
+      return; 
     }
 
     const stringValue = value?.toString().trim();
@@ -53,7 +53,6 @@ export class ContractService {
 
       case 'TEXT':
       case 'TEXTAREA':
-        // Apenas valida se é string
         if (typeof stringValue !== 'string') {
           throw new BadRequestException(`Campo texto deve conter texto válido`);
         }
@@ -78,7 +77,6 @@ export class ContractService {
       }
     }
 
-    // Validar tipos de campos
     for (const templateField of template.fields) {
       if (fields[templateField.id]) {
         this.validateFieldValue(templateField.fieldType, fields[templateField.id]);
@@ -113,7 +111,6 @@ export class ContractService {
       return newContract;
     });
 
-    // Registrar no histórico após commit da transaction
     await this.historyService.createAuditLog(
       contract.id,
       tenantId,
@@ -175,7 +172,6 @@ export class ContractService {
       if (endDate) where.createdAt.lte = endDate;
     }
 
-    // Filtro por busca em valores de campos
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -227,7 +223,6 @@ export class ContractService {
       throw new BadRequestException('Apenas contratos em rascunho podem ser editados');
     }
 
-    // Validar tipos de campos se houver atualização
     if (data.fields) {
       const template = contract.template;
       for (const templateField of template.fields) {
@@ -262,7 +257,6 @@ export class ContractService {
       return result;
     });
 
-    // Registrar histórico após commit da transaction
     if (data.fields) {
       for (const [fieldId, value] of Object.entries(data.fields)) {
         const oldField = contract.fields.find(f => f.fieldId === fieldId);

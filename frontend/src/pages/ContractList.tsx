@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { contractsApi } from "../api/contracts";
-import { templatesApi } from "../api/templates";
-import type { Contract, Template, TemplateField } from "../types";
+import type { Contract } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,21 +17,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Plus, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Search, Pencil } from "lucide-react";
+import { CreateContractModal } from "../components/CreateContractModal";
+import { EditContractModal } from "../components/EditContractModal";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Rascunho",
@@ -42,13 +35,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function ContractList() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [template, setTemplate] = useState<Template | null>(null);
 
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
@@ -56,13 +46,17 @@ export function ContractList() {
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
 
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const loadingRef = useRef(false);
+
+  useEffect(() => {
+    console.log("[ContractList] showCreateModal mudou para:", showCreateModal);
+  }, [showCreateModal]);
 
   const loadContracts = useCallback(async () => {
+    if (loadingRef.current) return; // Prevent duplicate requests
+    loadingRef.current = true;
     setLoading(true);
     try {
       const params: Record<string, unknown> = { page, limit: 10 };
@@ -77,129 +71,13 @@ export function ContractList() {
       // silently fail
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [page, status, search, startDate, endDate]);
 
   useEffect(() => {
     loadContracts();
   }, [loadContracts]);
-
-  const openCreateModal = async () => {
-    try {
-      const tmpl = await templatesApi.getActive();
-      setTemplate(tmpl);
-      const defaults: Record<string, string> = {};
-      tmpl.fields.forEach((f: TemplateField) => {
-        defaults[f.id] = f.defaultValue || "";
-      });
-      setFieldValues(defaults);
-      setNewTitle("");
-      setNewDescription("");
-      setCreateError("");
-      setShowModal(true);
-    } catch {
-      alert(
-        "Nenhum template ativo encontrado. Configure um template primeiro.",
-      );
-    }
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreateError("");
-    setCreating(true);
-    try {
-      const contract = await contractsApi.create({
-        templateId: template!.id,
-        title: newTitle,
-        description: newDescription || undefined,
-        fields: fieldValues,
-      });
-      setShowModal(false);
-      navigate(`/contracts/${contract.id}`);
-    } catch (err: unknown) {
-      const msg = (err as any)?.response?.data?.message;
-      setCreateError(
-        Array.isArray(msg) ? msg.join(", ") : msg || "Erro ao criar contrato",
-      );
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const renderFieldInput = (field: TemplateField) => {
-    const value = fieldValues[field.id] ?? "";
-    const onChange = (v: string) =>
-      setFieldValues({ ...fieldValues, [field.id]: v });
-
-    switch (field.fieldType) {
-      case "TEXTAREA":
-        return (
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            rows={3}
-            required={field.required}
-          />
-        );
-      case "BOOLEAN":
-        return (
-          <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            required={field.required}
-          >
-            <option value="">Selecione</option>
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
-          </select>
-        );
-      case "DATE":
-        return (
-          <Input
-            type="date"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            required={field.required}
-            className="h-8 text-sm"
-          />
-        );
-      case "NUMBER":
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            className="h-8 text-sm"
-          />
-        );
-      case "EMAIL":
-        return (
-          <Input
-            type="email"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            className="h-8 text-sm"
-          />
-        );
-      default:
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder}
-            required={field.required}
-            className="h-8 text-sm"
-          />
-        );
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -211,7 +89,10 @@ export function ContractList() {
           </p>
         </div>
         {user?.role === "ADMIN" && (
-          <Button onClick={openCreateModal} className="rounded-full">
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="rounded-full"
+          >
             <Plus size={16} className="mr-1" /> Novo Contrato
           </Button>
         )}
@@ -238,7 +119,7 @@ export function ContractList() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  placeholder="Título, descrição..."
+                  placeholder="Titulo, descricao..."
                   className="pl-8 h-8 text-sm"
                 />
               </div>
@@ -276,7 +157,7 @@ export function ContractList() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Até</Label>
+              <Label className="text-xs">Ate</Label>
               <Input
                 type="date"
                 value={endDate}
@@ -305,7 +186,7 @@ export function ContractList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
+                  <TableHead>Titulo</TableHead>
                   <TableHead>Template</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Criado em</TableHead>
@@ -324,7 +205,7 @@ export function ContractList() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {c.template?.name || "—"}
+                      {c.template?.name || "-"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -338,14 +219,26 @@ export function ContractList() {
                       {new Date(c.createdAt).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                        className="h-7 text-xs text-primary"
-                      >
-                        <Link to={`/contracts/${c.id}`}>Ver →</Link>
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {user?.role === "ADMIN" && c.status === "DRAFT" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setEditingContract(c)}
+                          >
+                            <Pencil size={12} className="mr-1" /> Editar
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="h-7 text-xs text-primary"
+                        >
+                          <Link to={`/contracts/${c.id}`}>Ver</Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -374,122 +267,23 @@ export function ContractList() {
                 onClick={() => setPage((p) => p + 1)}
                 className="h-7"
               >
-                Próxima <ChevronRight size={14} className="ml-1" />
+                Proxima <ChevronRight size={14} className="ml-1" />
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Dialog
-        open={showModal && !!template}
-        onOpenChange={(open) => !open && setShowModal(false)}
-      >
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Contrato</DialogTitle>
-          </DialogHeader>
-          <form
-            id="create-contract-form"
-            onSubmit={handleCreate}
-            className="space-y-4"
-          >
-            {createError && (
-              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
-                {createError}
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="newTitle">Título *</Label>
-              <Input
-                id="newTitle"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Título do contrato"
-                required
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="newDesc">Descrição</Label>
-              <Input
-                id="newDesc"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Descrição opcional"
-              />
-            </div>
+      <CreateContractModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
 
-            {template && template.fields.length > 0 && (
-              <>
-                <Separator />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Campos do Template: {template.name}
-                </p>
-                {template.fields.map((field) => (
-                  <div key={field.id} className="space-y-1.5">
-                    <Label>
-                      {field.name}{" "}
-                      {field.required && (
-                        <span className="text-destructive">*</span>
-                      )}
-                    </Label>
-                    {field.fieldType === "TEXTAREA" ? (
-                      <textarea
-                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        value={fieldValues[field.id] ?? ""}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.id]: e.target.value,
-                          })
-                        }
-                        placeholder={field.placeholder}
-                        rows={3}
-                        required={field.required}
-                      />
-                    ) : field.fieldType === "BOOLEAN" ? (
-                      <Select
-                        value={fieldValues[field.id] ?? ""}
-                        onValueChange={(v) =>
-                          setFieldValues({ ...fieldValues, [field.id]: v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Sim</SelectItem>
-                          <SelectItem value="false">Não</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      renderFieldInput(field)
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-          </form>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setShowModal(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="create-contract-form"
-              disabled={creating}
-              className="rounded-full"
-            >
-              {creating ? "Criando..." : "Criar Contrato"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditContractModal
+        contract={editingContract}
+        onClose={() => setEditingContract(null)}
+        onSaved={loadContracts}
+      />
     </div>
   );
 }
