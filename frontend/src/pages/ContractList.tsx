@@ -50,10 +50,6 @@ export function ContractList() {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const loadingRef = useRef(false);
 
-  useEffect(() => {
-    console.log("[ContractList] showCreateModal mudou para:", showCreateModal);
-  }, [showCreateModal]);
-
   const loadContracts = useCallback(async () => {
     if (loadingRef.current) return; // Prevent duplicate requests
     loadingRef.current = true;

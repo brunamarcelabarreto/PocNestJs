@@ -36,9 +36,7 @@ export type UpdateTemplateInput = z.infer<typeof UpdateTemplateSchema>;
 export type TemplateField = z.infer<typeof TemplateFieldSchema>;
 
 export const CreateContractSchema = z.object({
-  templateId: z
-    .string()
-    .min(1, "Template é obrigatório"),
+  templateId: z.string().optional(), // Validação feita na UI
   title: z
     .string()
     .min(1, "Título do contrato não pode estar vazio")

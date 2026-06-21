@@ -131,32 +131,36 @@ export function TemplateConfig() {
     setFields(fields.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
 
   const validateTemplate = (): string | null => {
-    const validFields = fields.filter((f) => f.name.trim());
+    try {
+      const validFields = fields.filter((f) => f.name.trim());
+      const nameTrimed = templateName.trim();
 
-    // Usar Zod para validação principal
-    const result = validateForm(CreateTemplateSchema, {
-      name: templateName,
-      fields: validFields,
-    });
-
-    if (!result.success) {
-      return result.error || "Erro de validação";
-    }
-
-    // Validação adicional: verificar duplicação de nomes (apenas para criar novo)
-    if (!editingTemplate) {
-      const existingNames = templates.map((t) => t.name.toLowerCase());
-      const nameTrimed = templateName.trim().toLowerCase();
-      if (existingNames.includes(nameTrimed)) {
-        return `Já existe um template com o nome "${templateName}".`;
+      if (!nameTrimed) {
+        return "Nome do template não pode estar vazio";
       }
+
+      const result = validateForm(CreateTemplateSchema, {
+        name: nameTrimed,
+        fields: validFields,
+      });
+
+      if (!result.success) {
+        return result.error || "Erro de validação";
+      }
+
+      if (!editingTemplate) {
+        const existingNames = templates.map((t) => t.name.trim().toLowerCase());
+        const nameToCheck = nameTrimed.toLowerCase();
+
+        if (existingNames.includes(nameToCheck)) {
+          return `Já existe um template com o nome "${nameTrimed}". Escolha outro nome.`;
+        }
+      }
+
+      return null;
+    } catch (err) {
+      return "Erro ao validar template. Tente novamente.";
     }
-
-    return null;
-  };
-
-  const isFormValid = (): boolean => {
-    return !validateTemplate();
   };
 
   const handleSave = async () => {
@@ -428,7 +432,7 @@ export function TemplateConfig() {
                 <Button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving || !isFormValid()}
+                  disabled={saving}
                   className="rounded-full"
                 >
                   {saving
