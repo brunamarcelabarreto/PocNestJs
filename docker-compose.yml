@@ -53,7 +53,6 @@ services:
       - backend
     volumes:
       - ./frontend/src:/app/src
-      - ./frontend/dist:/app/dist
     networks:
       - commandix_network
     environment:
