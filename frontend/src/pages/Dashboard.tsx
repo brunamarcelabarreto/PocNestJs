@@ -41,7 +41,7 @@ export function Dashboard() {
   const loadingRef = useRef(false);
 
   useEffect(() => {
-    if (loadingRef.current) return; // Prevent duplicate requests
+    if (loadingRef.current) return;
     loadingRef.current = true;
 
     const load = async () => {

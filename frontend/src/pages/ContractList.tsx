@@ -51,7 +51,7 @@ export function ContractList() {
   const loadingRef = useRef(false);
 
   const loadContracts = useCallback(async () => {
-    if (loadingRef.current) return; // Prevent duplicate requests
+    if (loadingRef.current) return; 
     loadingRef.current = true;
     setLoading(true);
     try {
