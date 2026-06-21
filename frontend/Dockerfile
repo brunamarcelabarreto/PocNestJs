@@ -3,11 +3,16 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build-time variables (valores definidos no .env da raiz via docker-compose build args)
+ARG VITE_API_URL
+ARG VITE_FRONTEND_URL
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_FRONTEND_URL=$VITE_FRONTEND_URL
+
 COPY package*.json ./
 RUN npm ci
 
 COPY index.html vite.config.ts tsconfig*.json tailwind.config.js postcss.config.js ./
-COPY .env ./
 COPY src ./src
 COPY public ./public
 

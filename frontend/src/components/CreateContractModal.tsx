@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { contractsApi } from "../api/contracts";
 import { templatesApi } from "../api/templates";
 import type { Template, TemplateField } from "../types";
+import {
+  CreateContractSchema,
+  validateForm,
+  validateRequiredFields,
+} from "../lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +40,9 @@ export function CreateContractModal({
   const navigate = useNavigate();
 
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [contracts, setContracts] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
   const [template, setTemplate] = useState<Template | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -51,11 +59,11 @@ export function CreateContractModal({
   };
 
   useEffect(() => {
-
     if (!open) {
       console.log("[CreateContractModal] Modal fechando");
       setTemplate(null);
       setTemplates([]);
+      setContracts([]);
       setTitle("");
       setDescription("");
       setFieldValues({});
@@ -63,11 +71,21 @@ export function CreateContractModal({
       return;
     }
 
-    const loadTemplates = async () => {
+    const loadData = async () => {
       try {
-        console.log("[CreateContractModal] Chamando templatesApi.list()...");
-        const tmplList = await templatesApi.list();
+        console.log(
+          "[CreateContractModal] Carregando templates e contratos...",
+        );
+        const [tmplList, contractList] = await Promise.all([
+          templatesApi.list(),
+          contractsApi.list(),
+        ]);
+
         console.log("[CreateContractModal] Templates carregados:", tmplList);
+        console.log(
+          "[CreateContractModal] Contratos carregados:",
+          contractList,
+        );
 
         if (!tmplList || tmplList.length === 0) {
           console.warn("[CreateContractModal] Nenhum template encontrado");
@@ -80,6 +98,7 @@ export function CreateContractModal({
         }
 
         setTemplates(tmplList);
+        setContracts(contractList || []);
         const firstTemplate = tmplList[0];
         console.log("[CreateContractModal] Primeiro template:", firstTemplate);
         setTemplate(firstTemplate);
@@ -88,14 +107,14 @@ export function CreateContractModal({
         setDescription("");
         setError("");
       } catch (err) {
-        console.error("[CreateContractModal] Erro ao carregar templates:", err);
-        setError("Erro ao carregar templates. Tente novamente.");
+        console.error("[CreateContractModal] Erro ao carregar dados:", err);
+        setError("Erro ao carregar dados. Tente novamente.");
         setTemplates([]);
         setTemplate(null);
       }
     };
 
-    loadTemplates();
+    loadData();
   }, [open]);
 
   const handleTemplateChange = (templateId: string) => {
@@ -106,9 +125,60 @@ export function CreateContractModal({
     }
   };
 
+  const validateContract = (): string | null => {
+    // Validação básica com Zod
+    const result = validateForm(CreateContractSchema, {
+      templateId: template?.id || "",
+      title,
+      description,
+      fields: fieldValues,
+    });
+
+    if (!result.success) {
+      return result.error || "Erro de validação";
+    }
+
+    // Validar título duplicado
+    const titleTrimmed = title.trim().toLowerCase();
+    const existingTitles = contracts.map((c) => c.title.toLowerCase());
+    if (existingTitles.includes(titleTrimmed)) {
+      return `Já existe um contrato com o título "${title}".`;
+    }
+
+    // Validar campos obrigatórios do template
+    if (template) {
+      const requiredFields = template.fields
+        .filter((f) => f.required)
+        .map((f) => ({ id: f.id, name: f.name }));
+
+      const requiredValidation = validateRequiredFields(
+        requiredFields,
+        fieldValues,
+      );
+      if (!requiredValidation.success) {
+        return (
+          requiredValidation.error || "Erro ao validar campos obrigatórios"
+        );
+      }
+    }
+
+    return null;
+  };
+
+  const isFormValid = (): boolean => {
+    return !validateContract() && template !== null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!template) return;
+
+    const validationError = validateContract();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setError("");
     setCreating(true);
     try {
@@ -157,9 +227,6 @@ export function CreateContractModal({
           )}
           <div className="space-y-1.5">
             <Label>Template *</Label>
-            <div className="text-xs text-muted-foreground mb-2">
-              Debug: {templates.length} templates carregados
-            </div>
             {templates.length === 0 ? (
               <div className="text-sm text-destructive">
                 Nenhum template disponível. Crie um template primeiro.
@@ -236,7 +303,7 @@ export function CreateContractModal({
           <Button
             type="submit"
             form="create-contract-form"
-            disabled={creating}
+            disabled={creating || !isFormValid()}
             className="rounded-full"
           >
             {creating ? "Criando..." : "Criar Contrato"}

@@ -3,6 +3,7 @@ import { templatesApi } from "../api/templates";
 import type { TemplateFieldInput } from "../api/templates";
 import type { Template, TemplateField, FieldType } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { CreateTemplateSchema, validateForm } from "../lib/validations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -129,18 +130,48 @@ export function TemplateConfig() {
   ) =>
     setFields(fields.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
 
+  const validateTemplate = (): string | null => {
+    const validFields = fields.filter((f) => f.name.trim());
+
+    // Usar Zod para validação principal
+    const result = validateForm(CreateTemplateSchema, {
+      name: templateName,
+      fields: validFields,
+    });
+
+    if (!result.success) {
+      return result.error || "Erro de validação";
+    }
+
+    // Validação adicional: verificar duplicação de nomes (apenas para criar novo)
+    if (!editingTemplate) {
+      const existingNames = templates.map((t) => t.name.toLowerCase());
+      const nameTrimed = templateName.trim().toLowerCase();
+      if (existingNames.includes(nameTrimed)) {
+        return `Já existe um template com o nome "${templateName}".`;
+      }
+    }
+
+    return null;
+  };
+
+  const isFormValid = (): boolean => {
+    return !validateTemplate();
+  };
+
   const handleSave = async () => {
     setError("");
     setSuccess("");
-    setSaving(true);
 
-    const validFields = fields.filter((f) => f.name.trim());
-    if (validFields.length === 0) {
-      setError("Adicione pelo menos um campo com nome.");
-      setSaving(false);
+    const validationError = validateTemplate();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
+    setSaving(true);
+
+    const validFields = fields.filter((f) => f.name.trim());
     const payload = {
       name: templateName,
       fields: validFields.map(
@@ -397,7 +428,7 @@ export function TemplateConfig() {
                 <Button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || !isFormValid()}
                   className="rounded-full"
                 >
                   {saving
