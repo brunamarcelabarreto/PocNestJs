@@ -1,4 +1,5 @@
 import { IsEmail, IsString, IsEnum, IsOptional, MinLength } from 'class-validator';
+import { MIN_PASSWORD_LENGTH } from '../../../common/constants/auth.constants';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -10,7 +11,7 @@ export class CreateUserDto {
   email!: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(MIN_PASSWORD_LENGTH)
   password!: string;
 
   @IsString()

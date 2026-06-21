@@ -1,5 +1,6 @@
 import { IsString, IsObject, IsOptional, IsEnum, IsDate, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { DEFAULT_CONTRACT_PAGE_LIMIT } from '../../../common/constants/pagination.constants';
 
 export enum ContractStatus {
   DRAFT = 'DRAFT',
@@ -70,7 +71,7 @@ export class ContractListQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  limit?: number = 10;
+  limit?: number = DEFAULT_CONTRACT_PAGE_LIMIT;
 
   @IsOptional()
   @IsString()

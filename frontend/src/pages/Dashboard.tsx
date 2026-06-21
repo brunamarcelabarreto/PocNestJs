@@ -21,12 +21,7 @@ import {
   LayoutDashboard,
   Settings,
 } from "lucide-react";
-
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Rascunho",
-  ACTIVE: "Ativo",
-  CLOSED: "Encerrado",
-};
+import { STATUS_LABEL, DASHBOARD_RECENT_LIMIT, LOCALE } from "../constants/contracts";
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -47,7 +42,7 @@ export function Dashboard() {
     const load = async () => {
       try {
         const [allRes, draftRes, activeRes, closedRes] = await Promise.all([
-          contractsApi.list({ limit: 5 }),
+          contractsApi.list({ limit: DASHBOARD_RECENT_LIMIT }),
           contractsApi.list({ status: "DRAFT", limit: 1 }),
           contractsApi.list({ status: "ACTIVE", limit: 1 }),
           contractsApi.list({ status: "CLOSED", limit: 1 }),
@@ -216,7 +211,7 @@ export function Dashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                      {new Date(c.createdAt).toLocaleDateString(LOCALE)}
                     </TableCell>
                   </TableRow>
                 ))}

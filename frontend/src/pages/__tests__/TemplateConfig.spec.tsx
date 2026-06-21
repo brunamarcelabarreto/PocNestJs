@@ -13,7 +13,8 @@ const mockUser = {
 vi.mock("../../api/templates", () => {
   return {
     templatesApi: {
-      getActive: vi.fn(),
+      list: vi.fn(),
+      create: vi.fn(),
       update: vi.fn(),
     },
   };
@@ -68,12 +69,11 @@ describe("TemplateConfig Page", () => {
 
   it("deve carregar template ativo", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
 
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se o template foi carregado (busca pelo nome em qualquer lugar)
       const elements = screen.queryAllByText(/contrato/i);
       expect(elements.length).toBeGreaterThan(0);
     });
@@ -81,12 +81,11 @@ describe("TemplateConfig Page", () => {
 
   it("deve exibir formulário de edição de template", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
 
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se há título ou conteúdo na página
       const headings = screen.queryAllByRole("heading");
       expect(headings.length).toBeGreaterThan(0);
     });
@@ -94,12 +93,11 @@ describe("TemplateConfig Page", () => {
 
   it("deve exibir campos do template em tabela", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
 
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se há tabela com dados
       const cells = screen.queryAllByRole("cell");
       expect(cells.length).toBeGreaterThan(0);
     });
@@ -107,17 +105,15 @@ describe("TemplateConfig Page", () => {
 
   it("deve adicionar novo campo ao template", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
 
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se o template foi carregado
       const cells = screen.queryAllByRole("cell");
       expect(cells.length).toBeGreaterThan(0);
     });
 
-    // Apenas verifica que há botões na página
     const buttons = screen.queryAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
@@ -137,26 +133,22 @@ describe("TemplateConfig Page", () => {
         },
       ],
     };
-    vi.mocked(templatesApi.getActive).mockResolvedValue(
-      templateWithMultipleFields,
-    );
+    vi.mocked(templatesApi.list).mockResolvedValue([templateWithMultipleFields]);
 
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se há células na tabela
       const cells = screen.queryAllByRole("cell");
       expect(cells.length).toBeGreaterThan(0);
     });
 
-    // Apenas verifica que há botões (remove ou não, não importa)
     const buttons = screen.queryAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
 
   it("deve salvar template atualizado", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
     vi.mocked(templatesApi.update).mockResolvedValue(mockTemplate);
 
     renderWithProviders(<TemplateConfig />);
@@ -172,7 +164,7 @@ describe("TemplateConfig Page", () => {
 
   it("deve exibir mensagem de sucesso após salvar", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
     vi.mocked(templatesApi.update).mockResolvedValue(mockTemplate);
 
     renderWithProviders(<TemplateConfig />);
@@ -182,14 +174,13 @@ describe("TemplateConfig Page", () => {
       expect(cells.length).toBeGreaterThan(0);
     });
 
-    // Apenas verifica que há botões
     const buttons = screen.queryAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
 
   it("deve exibir erro ao salvar template com dados inválidos", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockResolvedValue(mockTemplate);
+    vi.mocked(templatesApi.list).mockResolvedValue([mockTemplate]);
     vi.mocked(templatesApi.update).mockRejectedValue({
       response: { data: { message: "Nome do template é obrigatório" } },
     });
@@ -197,25 +188,22 @@ describe("TemplateConfig Page", () => {
     renderWithProviders(<TemplateConfig />);
 
     await waitFor(() => {
-      // Verifica se há células na tabela
       const cells = screen.queryAllByRole("cell");
       expect(cells.length).toBeGreaterThan(0);
     });
 
-    // Apenas verifica que há botões
     const buttons = screen.queryAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
 
   it("deve mostrar página de loading ao carregar template", async () => {
     const { templatesApi } = await import("../../api/templates");
-    vi.mocked(templatesApi.getActive).mockImplementation(
-      () => new Promise(() => {}), // Never resolves
+    vi.mocked(templatesApi.list).mockImplementation(
+      () => new Promise(() => {}),
     );
 
     renderWithProviders(<TemplateConfig />);
 
-    // Página deve estar em estado de carregamento
     const spinner = document.querySelector(".spinner");
     if (spinner) {
       expect(spinner).toBeInTheDocument();

@@ -26,12 +26,8 @@ import {
 import { Plus, ChevronLeft, ChevronRight, Search, Pencil } from "lucide-react";
 import { CreateContractModal } from "../components/CreateContractModal";
 import { EditContractModal } from "../components/EditContractModal";
-
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Rascunho",
-  ACTIVE: "Ativo",
-  CLOSED: "Encerrado",
-};
+import { STATUS_LABEL, CONTRACT_LIST_LIMIT, LOCALE } from "../constants/contracts";
+import { USER_ROLE } from "../constants/auth";
 
 export function ContractList() {
   const { user } = useAuth();
@@ -55,7 +51,7 @@ export function ContractList() {
     loadingRef.current = true;
     setLoading(true);
     try {
-      const params: Record<string, unknown> = { page, limit: 10 };
+      const params: Record<string, unknown> = { page, limit: CONTRACT_LIST_LIMIT };
       if (status) params.status = status;
       if (search) params.search = search;
       if (startDate) params.startDate = startDate;
@@ -84,7 +80,7 @@ export function ContractList() {
             {pagination.total} contrato(s) encontrado(s)
           </p>
         </div>
-        {user?.role === "ADMIN" && (
+        {user?.role === USER_ROLE.ADMIN && (
           <Button
             onClick={() => setShowCreateModal(true)}
             className="rounded-full"
@@ -212,11 +208,11 @@ export function ContractList() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                      {new Date(c.createdAt).toLocaleDateString(LOCALE)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {user?.role === "ADMIN" && c.status === "DRAFT" && (
+                        {user?.role === USER_ROLE.ADMIN && c.status === "DRAFT" && (
                           <Button
                             variant="ghost"
                             size="sm"

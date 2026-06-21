@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil } from "lucide-react";
+import { USER_ROLE } from "../constants/auth";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "TEXT", label: "Texto" },
@@ -204,7 +205,7 @@ export function TemplateConfig() {
     }
   };
 
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === USER_ROLE.ADMIN;
 
   if (loading)
     return (

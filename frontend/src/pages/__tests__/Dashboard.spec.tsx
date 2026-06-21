@@ -141,7 +141,7 @@ describe("Dashboard Page", () => {
     });
   });
 
-  it('deve mostrar botão "Novo Contrato" para ADMIN', async () => {
+  it('deve mostrar link para contratos para ADMIN', async () => {
     const { contractsApi } = await import("../../api/contracts");
     vi.mocked(contractsApi.list).mockResolvedValue({
       data: [],
@@ -151,7 +151,7 @@ describe("Dashboard Page", () => {
     renderWithProviders(<Dashboard />);
 
     await waitFor(() => {
-      const btn = screen.getByRole("link", { name: /novo contrato/i });
+      const btn = screen.getByRole("link", { name: /lista de contratos/i });
       expect(btn).toBeInTheDocument();
       expect(btn).toHaveAttribute("href", "/contracts");
     });

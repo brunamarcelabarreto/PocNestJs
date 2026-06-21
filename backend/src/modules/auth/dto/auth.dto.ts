@@ -1,19 +1,20 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import { MIN_NAME_LENGTH, MIN_PASSWORD_LENGTH } from '../../../common/constants/auth.constants';
 
 export class RegisterTenantDto {
   @IsString()
-  @MinLength(3)
+  @MinLength(MIN_NAME_LENGTH)
   tenantName!: string;
 
   @IsEmail()
   email!: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(MIN_PASSWORD_LENGTH)
   password!: string;
 
   @IsString()
-  @MinLength(3)
+  @MinLength(MIN_NAME_LENGTH)
   adminName!: string;
 }
 

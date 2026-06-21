@@ -13,12 +13,14 @@ const mockUser = {
   tenantId: "test-tenant-id",
 };
 
+// Stable navigate reference — avoids infinite re-render from useCallback deps changing
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
+  const navigateFn = vi.fn();
   return {
     ...actual,
     useParams: () => ({ id: "contract-1" }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => navigateFn,
   };
 });
 
@@ -61,8 +63,8 @@ const mockContract = {
   status: "DRAFT",
   tenantId: "test-tenant-id",
   fields: [
-    { id: "f1", name: "Valor", value: "10000.00" },
-    { id: "f2", name: "Data", value: "2026-12-31" },
+    { id: "f1", fieldId: "field-1", field: { name: "Valor" }, value: "10000.00" },
+    { id: "f2", fieldId: "field-2", field: { name: "Data" }, value: "2026-12-31" },
   ],
   createdAt: "2026-06-18T00:00:00Z",
   updatedAt: "2026-06-18T00:00:00Z",
@@ -72,23 +74,22 @@ const mockHistory = [
   {
     id: "log-1",
     action: "CONTRACT_CREATED",
-    performedBy: "Admin User",
-    performedAt: "2026-06-18T10:00:00Z",
-    changes: {},
+    user: { name: "Admin User", email: "admin@test.com" },
+    createdAt: "2026-06-18T10:00:00Z",
   },
   {
     id: "log-2",
     action: "FIELD_UPDATED",
-    performedBy: "Admin User",
-    performedAt: "2026-06-18T11:00:00Z",
-    changes: { field: "Valor", oldValue: "5000", newValue: "10000" },
+    user: { name: "Admin User", email: "admin@test.com" },
+    createdAt: "2026-06-18T11:00:00Z",
+    oldValue: "5000",
+    newValue: "10000",
   },
 ];
 
 describe("ContractDetail Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.confirm = vi.fn(() => true);
   });
 
   it("deve carregar e exibir detalhes do contrato", async () => {
@@ -124,11 +125,9 @@ describe("ContractDetail Page", () => {
     renderWithProviders(<ContractDetail />);
 
     await waitFor(() => {
-      // Verifica se o contrato foi carregado
       expect(screen.getByText("Contrato Principal")).toBeInTheDocument();
     });
 
-    // Verifica se há abas ou tabelas na página
     const tabs = screen.queryAllByRole("tab");
     expect(tabs.length).toBeGreaterThanOrEqual(0);
   });
@@ -144,10 +143,7 @@ describe("ContractDetail Page", () => {
       expect(screen.getByText("Contrato Principal")).toBeInTheDocument();
     });
 
-    // Verifica se o histórico foi carregado
-    expect(vi.mocked(contractsApi.getHistory)).toHaveBeenCalledWith(
-      "contract-1",
-    );
+    expect(vi.mocked(contractsApi.getHistory)).toHaveBeenCalledWith("contract-1");
   });
 
   it("deve mostrar botão de ativar para contrato em rascunho", async () => {
@@ -176,18 +172,19 @@ describe("ContractDetail Page", () => {
     renderWithProviders(<ContractDetail />);
 
     await waitFor(() => {
-      const activateBtn = screen.getByRole("button", { name: /ativar/i });
-      expect(activateBtn).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /ativar/i })).toBeInTheDocument();
     });
 
-    const activateBtn = screen.getByRole("button", { name: /ativar/i });
-    await user.click(activateBtn);
+    await user.click(screen.getByRole("button", { name: /ativar/i }));
+
+    // Confirm dialog opens — click "Confirmar"
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /confirmar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /confirmar/i }));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalledWith("Ativar este contrato?");
-      expect(vi.mocked(contractsApi.activate)).toHaveBeenCalledWith(
-        "contract-1",
-      );
+      expect(vi.mocked(contractsApi.activate)).toHaveBeenCalledWith("contract-1");
     });
   });
 
@@ -219,17 +216,18 @@ describe("ContractDetail Page", () => {
     renderWithProviders(<ContractDetail />);
 
     await waitFor(() => {
-      const closeBtn = screen.getByRole("button", { name: /encerrar|fechar/i });
-      expect(closeBtn).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /encerrar|fechar/i })).toBeInTheDocument();
     });
 
-    const closeBtn = screen.getByRole("button", { name: /encerrar|fechar/i });
-    await user.click(closeBtn);
+    await user.click(screen.getByRole("button", { name: /encerrar|fechar/i }));
+
+    // Confirm dialog opens — click "Confirmar"
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /confirmar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /confirmar/i }));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalledWith(
-        expect.stringContaining("Encerrar este contrato"),
-      );
       expect(vi.mocked(contractsApi.close)).toHaveBeenCalledWith("contract-1");
     });
   });
@@ -245,7 +243,6 @@ describe("ContractDetail Page", () => {
       expect(screen.getByText("Contrato Principal")).toBeInTheDocument();
     });
 
-    // Verifica se as abas existem na página
     const tabs = screen.queryAllByRole("tab");
     expect(tabs.length).toBeGreaterThan(0);
   });
@@ -259,14 +256,11 @@ describe("ContractDetail Page", () => {
     renderWithProviders(<ContractDetail />);
 
     await waitFor(() => {
-      const historyTab = screen.getByRole("tab", {
-        name: /histórico|history/i,
-      });
+      const historyTab = screen.getByRole("tab", { name: /histórico|history/i });
       expect(historyTab).toBeInTheDocument();
     });
 
-    const historyTab = screen.getByRole("tab", { name: /histórico|history/i });
-    await user.click(historyTab);
+    await user.click(screen.getByRole("tab", { name: /histórico|history/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Contrato criado")).toBeInTheDocument();
@@ -284,7 +278,6 @@ describe("ContractDetail Page", () => {
       expect(screen.getByText("Contrato Principal")).toBeInTheDocument();
     });
 
-    // Verifica se há botão de navegação (voltar)
     const buttons = screen.queryAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
@@ -297,9 +290,7 @@ describe("ContractDetail Page", () => {
     renderWithProviders(<ContractDetail />);
 
     await waitFor(() => {
-      expect(vi.mocked(contractsApi.getHistory)).toHaveBeenCalledWith(
-        "contract-1",
-      );
+      expect(vi.mocked(contractsApi.getHistory)).toHaveBeenCalledWith("contract-1");
     });
   });
 });

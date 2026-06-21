@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { REFRESH_TOKEN_EXPIRY_SECONDS } from '../../common/constants/auth.constants';
 
 const mockPrisma: any = {
   user: {
@@ -27,6 +29,13 @@ const mockJwtService = {
   verifyAsync: jest.fn(),
 };
 
+const mockConfigService = {
+  get: jest.fn().mockImplementation((key: string, defaultValue?: string) => {
+    if (key === 'JWT_REFRESH_EXPIRATION') return defaultValue ?? REFRESH_TOKEN_EXPIRY_SECONDS;
+    return defaultValue;
+  }),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -38,6 +47,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 

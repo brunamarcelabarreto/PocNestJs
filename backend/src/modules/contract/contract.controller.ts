@@ -16,6 +16,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '../../modules/auth/dto/user.dto';
 
 @Controller('api/contracts')
 @UseGuards(JwtGuard)
@@ -54,7 +55,7 @@ export class ContractController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   async update(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,
@@ -66,7 +67,7 @@ export class ContractController {
 
   @Patch(':id/activate')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   async activate(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,
@@ -77,7 +78,7 @@ export class ContractController {
 
   @Patch(':id/close')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   async close(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,

@@ -1,0 +1,2 @@
+export const DEFAULT_CONTRACT_PAGE_LIMIT = 10;
+export const DEFAULT_HISTORY_PAGE_LIMIT = 20;

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { DEFAULT_HISTORY_PAGE_LIMIT } from '../../common/constants/pagination.constants';
 
 @Injectable()
 export class HistoryService {
@@ -55,7 +56,7 @@ export class HistoryService {
     contractId: string,
     tenantId: string,
     page: number = 1,
-    limit: number = 20,
+    limit: number = DEFAULT_HISTORY_PAGE_LIMIT,
   ) {
     const contract = await this.prisma.contract.findUnique({
       where: { id: contractId },

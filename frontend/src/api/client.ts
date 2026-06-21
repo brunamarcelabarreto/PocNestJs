@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { STORAGE_KEYS, AUTH_EVENT, API_AUTH_PATH } from '../constants/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -24,8 +25,8 @@ const processQueue = (error: unknown, token?: string) => {
 };
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  const isAuthEndpoint = config.url?.includes('/api/auth/');
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  const isAuthEndpoint = config.url?.includes(API_AUTH_PATH);
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -47,7 +48,7 @@ client.interceptors.response.use(
       message: error.response?.data?.message,
     });
 
-    const isAuthEndpoint = original?.url?.includes('/api/auth/');
+    const isAuthEndpoint = original?.url?.includes(API_AUTH_PATH);
 
     if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
@@ -61,7 +62,7 @@ client.interceptors.response.use(
           .catch((err) => {
             console.error('[Queue] Falha no refresh, redirecionando para login');
             localStorage.clear();
-            window.dispatchEvent(new Event('auth:logout'));
+            window.dispatchEvent(new Event(AUTH_EVENT.LOGOUT));
             return Promise.reject(err);
           });
       }
@@ -70,7 +71,7 @@ client.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
           throw new Error('No refresh token');
         }
@@ -85,9 +86,9 @@ client.interceptors.response.use(
           throw new Error('No access token in response');
         }
 
-        localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
         if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
         }
 
         client.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
@@ -102,7 +103,7 @@ client.interceptors.response.use(
         processQueue(err);
         isRefreshing = false;
         localStorage.clear();
-        window.dispatchEvent(new Event('auth:logout'));
+        window.dispatchEvent(new Event(AUTH_EVENT.LOGOUT));
         return Promise.reject(err);
       }
     }

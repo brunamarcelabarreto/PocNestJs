@@ -11,22 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, CheckCircle, XCircle } from "lucide-react";
 import { AlertDialog } from "../components/AlertDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-
-
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Rascunho",
-  ACTIVE: "Ativo",
-  CLOSED: "Encerrado",
-};
-
-const ACTION_LABEL: Record<string, string> = {
-  CONTRACT_CREATED: "Contrato criado",
-  CONTRACT_UPDATED: "Contrato atualizado",
-  FIELD_UPDATED: "Campo atualizado",
-  CONTRACT_ACTIVATED: "Contrato ativado",
-  CONTRACT_CLOSED: "Contrato encerrado",
-  STATUS_CHANGED: "Status alterado",
-};
+import { STATUS_LABEL, ACTION_LABEL, LOCALE } from "../constants/contracts";
+import { USER_ROLE } from "../constants/auth";
 
 export function ContractDetail() {
   const { id } = useParams<{ id: string }>();
@@ -127,7 +113,7 @@ export function ContractDetail() {
     );
   if (!contract) return null;
 
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === USER_ROLE.ADMIN;
 
   return (
     <div className="space-y-6">
@@ -239,7 +225,7 @@ export function ContractDetail() {
                     Criado em
                   </p>
                   <p className="text-sm text-foreground">
-                    {new Date(contract.createdAt).toLocaleString("pt-BR")}
+                    {new Date(contract.createdAt).toLocaleString(LOCALE)}
                   </p>
                 </div>
                 {contract.activatedAt && (
@@ -248,7 +234,7 @@ export function ContractDetail() {
                       Ativado em
                     </p>
                     <p className="text-sm text-foreground">
-                      {new Date(contract.activatedAt).toLocaleString("pt-BR")}
+                      {new Date(contract.activatedAt).toLocaleString(LOCALE)}
                     </p>
                   </div>
                 )}
@@ -258,7 +244,7 @@ export function ContractDetail() {
                       Encerrado em
                     </p>
                     <p className="text-sm text-foreground">
-                      {new Date(contract.closedAt).toLocaleString("pt-BR")}
+                      {new Date(contract.closedAt).toLocaleString(LOCALE)}
                     </p>
                   </div>
                 )}
@@ -309,7 +295,7 @@ export function ContractDetail() {
                           </strong>
                           <span className="text-xs text-muted-foreground">
                             {log.user?.name} ·{" "}
-                            {new Date(log.createdAt).toLocaleString("pt-BR")}
+                            {new Date(log.createdAt).toLocaleString(LOCALE)}
                           </span>
                         </div>
                         {log.description && (

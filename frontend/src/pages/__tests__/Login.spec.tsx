@@ -3,6 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 
+const MOCK_ASYNC_DELAY_MS = 100;
+
 vi.mock("../../api/auth", () => {
   return {
     authApi: {
@@ -129,7 +131,7 @@ describe("Login Page", () => {
   it("deve mostrar estado de loading durante login", async () => {
     const { authApi } = await import("../../api/auth");
     vi.mocked(authApi.login).mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 100)),
+      () => new Promise((resolve) => setTimeout(resolve, MOCK_ASYNC_DELAY_MS)),
     );
 
     const user = userEvent.setup();

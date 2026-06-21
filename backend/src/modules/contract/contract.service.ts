@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { HistoryService } from '../history/history.service';
+import { ContractStatus } from './dto/contract.dto';
+import { AuditAction } from '../history/dto/audit-log.dto';
+import { DEFAULT_CONTRACT_PAGE_LIMIT } from '../../common/constants/pagination.constants';
+import { EMAIL_REGEX, PHONE_REGEX, MIN_PHONE_DIGITS } from '../../common/constants/validation.constants';
 
 @Injectable()
 export class ContractService {
@@ -31,15 +35,13 @@ export class ContractService {
         break;
 
       case 'EMAIL':
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(stringValue)) {
+        if (!EMAIL_REGEX.test(stringValue)) {
           throw new BadRequestException(`Campo email deve conter um email válido`);
         }
         break;
 
       case 'PHONE':
-        const phoneRegex = /^[\d\s+\-()]+$/;
-        if (!phoneRegex.test(stringValue) || stringValue.replace(/\D/g, '').length < 10) {
+        if (!PHONE_REGEX.test(stringValue) || stringValue.replace(/\D/g, '').length < MIN_PHONE_DIGITS) {
           throw new BadRequestException(`Campo telefone deve conter um número válido`);
         }
         break;
@@ -90,7 +92,7 @@ export class ContractService {
           tenantId,
           templateId,
           createdBy: userId,
-          status: 'DRAFT',
+          status: ContractStatus.DRAFT,
           fields: {
             create: Object.entries(fields).map(([fieldId, value]) => ({
               fieldId,
@@ -115,7 +117,7 @@ export class ContractService {
       contract.id,
       tenantId,
       userId,
-      'CONTRACT_CREATED',
+      AuditAction.CONTRACT_CREATED,
       undefined,
       undefined,
       undefined,
@@ -158,7 +160,7 @@ export class ContractService {
     endDate?: Date,
     search?: string,
     page: number = 1,
-    limit: number = 10,
+    limit: number = DEFAULT_CONTRACT_PAGE_LIMIT,
   ) {
     const where: any = { tenantId };
 
@@ -219,7 +221,7 @@ export class ContractService {
   async update(id: string, tenantId: string, data: any, userId: string) {
     const contract = await this.getById(id, tenantId);
 
-    if (contract.status !== 'DRAFT') {
+    if (contract.status !== ContractStatus.DRAFT) {
       throw new BadRequestException('Apenas contratos em rascunho podem ser editados');
     }
 
@@ -264,7 +266,7 @@ export class ContractService {
           id,
           tenantId,
           userId,
-          'FIELD_UPDATED',
+          AuditAction.FIELD_UPDATED,
           fieldId,
           oldField?.value ?? undefined,
           value?.toString(),
@@ -278,7 +280,7 @@ export class ContractService {
         id,
         tenantId,
         userId,
-        'CONTRACT_UPDATED',
+        AuditAction.CONTRACT_UPDATED,
         undefined,
         undefined,
         undefined,
@@ -292,7 +294,7 @@ export class ContractService {
   async activate(id: string, tenantId: string, userId: string) {
     const contract = await this.getById(id, tenantId);
 
-    if (contract.status !== 'DRAFT') {
+    if (contract.status !== ContractStatus.DRAFT) {
       throw new BadRequestException('Apenas rascunhos podem ser ativados');
     }
 
@@ -300,7 +302,7 @@ export class ContractService {
       return await tx.contract.update({
         where: { id },
         data: {
-          status: 'ACTIVE',
+          status: ContractStatus.ACTIVE,
           activatedAt: new Date(),
           updatedBy: userId,
         },
@@ -311,10 +313,10 @@ export class ContractService {
       id,
       tenantId,
       userId,
-      'CONTRACT_ACTIVATED',
+      AuditAction.CONTRACT_ACTIVATED,
       undefined,
-      'DRAFT',
-      'ACTIVE',
+      ContractStatus.DRAFT,
+      ContractStatus.ACTIVE,
       `Contrato ativado`,
     );
 
@@ -324,7 +326,7 @@ export class ContractService {
   async close(id: string, tenantId: string, userId: string) {
     const contract = await this.getById(id, tenantId);
 
-    if (contract.status !== 'ACTIVE') {
+    if (contract.status !== ContractStatus.ACTIVE) {
       throw new BadRequestException('Apenas contratos ativos podem ser encerrados');
     }
 
@@ -332,7 +334,7 @@ export class ContractService {
       return await tx.contract.update({
         where: { id },
         data: {
-          status: 'CLOSED',
+          status: ContractStatus.CLOSED,
           closedAt: new Date(),
           updatedBy: userId,
         },
@@ -343,10 +345,10 @@ export class ContractService {
       id,
       tenantId,
       userId,
-      'CONTRACT_CLOSED',
+      AuditAction.CONTRACT_CLOSED,
       undefined,
-      'ACTIVE',
-      'CLOSED',
+      ContractStatus.ACTIVE,
+      ContractStatus.CLOSED,
       `Contrato encerrado`,
     );
 

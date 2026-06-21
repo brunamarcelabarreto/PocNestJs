@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "../AuthContext";
 
 vi.mock("../../api/auth", () => {
@@ -11,6 +12,14 @@ vi.mock("../../api/auth", () => {
       login: mockAuthLogin,
       logout: mockAuthLogout,
     },
+  };
+});
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
   };
 });
 
@@ -29,7 +38,6 @@ const mockTokens = {
   user: mockUser,
 };
 
-// Component for testing the hook
 function TestComponent() {
   const { user, loading, login, logout } = useAuth();
 
@@ -55,6 +63,14 @@ function TestComponent() {
   );
 }
 
+function renderWithRouter(component: React.ReactNode) {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>{component}</AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("AuthContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,12 +81,7 @@ describe("AuthContext", () => {
   });
 
   it("deve renderizar com usuário não autenticado", () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>,
-    );
-
+    renderWithRouter(<TestComponent />);
     expect(screen.getByTestId("no-user")).toBeInTheDocument();
   });
 
@@ -78,11 +89,7 @@ describe("AuthContext", () => {
     const { authApi } = await import("../../api/auth");
     vi.mocked(authApi.login).mockResolvedValue(mockTokens);
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>,
-    );
+    renderWithRouter(<TestComponent />);
 
     const loginBtn = screen.getByText("Login");
     loginBtn.click();
@@ -108,7 +115,8 @@ describe("AuthContext", () => {
     vi.mocked(authApi.login).mockResolvedValue(mockTokens);
     vi.mocked(authApi.logout).mockResolvedValue({});
 
-    // Login first
+    renderWithRouter(<TestComponent />);
+
     const loginBtn = screen.getByText("Login");
     loginBtn.click();
 
@@ -116,7 +124,6 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("user-email")).toBeInTheDocument();
     });
 
-    // Logout
     const logoutBtn = screen.getByText("Logout");
     logoutBtn.click();
 
@@ -133,11 +140,7 @@ describe("AuthContext", () => {
       return null;
     });
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>,
-    );
+    renderWithRouter(<TestComponent />);
 
     await waitFor(() => {
       expect(screen.getByTestId("user-email")).toHaveTextContent(

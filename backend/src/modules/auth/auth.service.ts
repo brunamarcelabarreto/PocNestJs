@@ -3,6 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from './dto/user.dto';
+import {
+  BCRYPT_SALT_ROUNDS,
+  MAX_SLUG_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  REFRESH_TOKEN_EXPIRY_MS,
+  REFRESH_TOKEN_EXPIRY_SECONDS,
+} from '../../common/constants/auth.constants';
 
 @Injectable()
 export class AuthService {
@@ -21,9 +29,9 @@ export class AuthService {
       throw new BadRequestException('Email já cadastrado');
     }
 
-    const slug = tenantName.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+    const slug = tenantName.toLowerCase().replace(/\s+/g, '-').slice(0, MAX_SLUG_LENGTH);
 
-    if (password.length < 8) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       throw new BadRequestException('Senha deve ter pelo menos 8 caracteres');
     }
 
@@ -42,7 +50,7 @@ export class AuthService {
           email,
           password: hashedPassword,
           name: adminName,
-          role: 'ADMIN',
+          role: UserRole.ADMIN,
           tenantId: tenant.id,
         },
       });
@@ -83,7 +91,7 @@ export class AuthService {
     const accessToken = this.generateJwt(user.id, user.email, user.tenantId, user.role);
     const refreshTokenValue = this.generateRefreshToken(user.id);
 
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
     await this.prisma.refreshToken.create({
       data: {
         token: refreshTokenValue,
@@ -128,7 +136,7 @@ export class AuthService {
     );
 
     const newRefreshTokenValue = this.generateRefreshToken(user.id);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.refreshToken.delete({
@@ -157,7 +165,7 @@ export class AuthService {
   }
 
   async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
     return bcrypt.hash(password, salt);
   }
 
@@ -182,7 +190,7 @@ export class AuthService {
       },
       {
         secret: this.config.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.config.get<string>('JWT_REFRESH_EXPIRATION', '604800s'),
+        expiresIn: this.config.get<string>('JWT_REFRESH_EXPIRATION', REFRESH_TOKEN_EXPIRY_SECONDS),
       },
     );
   }
